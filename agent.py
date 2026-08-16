@@ -1,8 +1,10 @@
 import os
+
 from dotenv import load_dotenv
 from openai import OpenAI
 
-# Load environment variables
+
+# Load environment variables from .env
 load_dotenv()
 
 # Get API key from environment
@@ -36,13 +38,13 @@ def main():
     print()
 
     while True:
-        user_input = input("You: ")
+        user_input = input("You: ").strip()
 
         if user_input.lower() == "exit":
             print("Agent: Goodbye!")
             break
 
-        if not user_input.strip():
+        if not user_input:
             print("Agent: Please enter a question.")
             continue
 
