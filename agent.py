@@ -1,63 +1,73 @@
 import os
+import sys
 from dotenv import load_dotenv
-from openai import OpenAI
+from google import genai
+from google.genai import types
 
-
-# Load environment variables from .env
+# Load variables from your local .env file
 load_dotenv()
 
-# Get API key from environment
-api_key = os.getenv("OPENAI_API_KEY")
+def create_coding_agent():
+    # Retrieve API key from environment (checks both standard and custom variable names)
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("Gemini_API")
+    
+    if not api_key:
+        print("❌ Error: GEMINI_API_KEY environment variable is not set.")
+        print("Please set GEMINI_API_KEY in your .env file or environment variables.")
+        return
 
-if not api_key:
-    raise ValueError(
-        "OPENAI_API_KEY is not set. Please add it to your .env file."
+    # Initialize the Google GenAI Client with the retrieved key
+    client = genai.Client(api_key=api_key)
+
+    # System instruction guiding the model's persona and architecture role
+    system_instruction = (
+        "You are an expert AI Software Engineer and Technical Architect assistant. "
+        "Your role is to help write, debug, refactor, and structure Python and software projects. "
+        "When requested, generate complete, clean, documented, and modular code. "
+        "When executing math or algorithmic validation, use the built-in code execution tool."
     )
 
-# Create OpenAI client
-client = OpenAI(api_key=api_key)
-
-
-def ask_agent(user_input):
-    """Send user input to the AI model and return the response."""
-
-    response = client.responses.create(
-        model="gpt-5.6",
-        input=user_input
+    # Enable native code execution tool
+    config = types.GenerateContentConfig(
+        system_instruction=system_instruction,
+        temperature=0.2,  # Low temperature for precise code generation
+        tools=[types.Tool(code_execution=types.ToolCodeExecution())]
     )
 
-    return response.output_text
+    # Create a persistent chat session using Gemini 3.6 Flash
+    chat = client.chats.create(
+        model="gemini-3.6-flash",
+        config=config
+    )
 
-
-def main():
-    print("=" * 50)
-    print("             BASIC AI AGENT")
-    print("=" * 50)
-    print("Type 'exit' to close the agent.")
-    print()
+    print("=" * 60)
+    print("🤖 AI Coding & Project Assistant Initialized")
+    print("Type 'exit' or 'quit' to end the session.")
+    print("=" * 60 + "\n")
 
     while True:
-        user_input = input("You: ").strip()
-
-        # Exit command
-        if user_input.lower() == "exit":
-            print("Agent: Goodbye!")
-            break
-
-        # Empty input
-        if not user_input:
-            print("Agent: Please enter a question.")
-            continue
-
-        # Ask AI
         try:
-            answer = ask_agent(user_input)
-            print("Agent:", answer)
-            print()
+            user_input = input("\n👤 You: ").strip()
+            if not user_input:
+                continue
+            if user_input.lower() in ["exit", "quit"]:
+                print("Exiting session. Happy coding!")
+                break
 
-        except Exception as error:
-            print("Agent Error:", error)
+            print("\n🤖 Assistant is thinking...\n")
+            
+            # Send message to the agent chat session
+            response = chat.send_message(user_input)
 
+            # Display agent response
+            print("🤖 Agent:")
+            print(response.text)
+
+        except KeyboardInterrupt:
+            print("\nSession interrupted. Exiting...")
+            break
+        except Exception as e:
+            print(f"\n❌ Error encountered: {e}")
 
 if __name__ == "__main__":
-    main()
+    create_coding_agent()
